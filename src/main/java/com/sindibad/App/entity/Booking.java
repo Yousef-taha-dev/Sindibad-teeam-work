@@ -26,6 +26,10 @@ public class Booking {
     )
     private Trip trip;
 
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "guide_id", nullable = true)
+    private Guide guide;
+
     @ManyToOne(fetch = FetchType.LAZY,optional = false)
     @JoinColumn(
             name = "tourist_id",

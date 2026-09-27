@@ -5,8 +5,11 @@ import java.time.LocalDateTime;
 
 public record BookingResponseDTO(
         Long bookingId,
+        String bookingType,
         Long tripId,
         String tripTitle,
+        Long guideId,
+        String guideName,
         Long touristId,
         String touristName,
         LocalDateTime bookingDate,
