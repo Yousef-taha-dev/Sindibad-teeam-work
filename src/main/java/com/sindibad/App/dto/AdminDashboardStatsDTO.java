@@ -3,11 +3,11 @@ package com.sindibad.App.dto;
 import java.math.BigDecimal;
 
 public record AdminDashboardStatsDTO(
-        long totalUsers,
+        long totalPersons,
+        long totalTourists,
         long totalGuides,
-        long pendingGuides,
+        long pendingGuideApprovals,
         long totalTrips,
         long totalBookings,
-        BigDecimal totalSystemRevenue,
-        BigDecimal totalGrossSales
+        BigDecimal totalAdminEarnings
 ) {}

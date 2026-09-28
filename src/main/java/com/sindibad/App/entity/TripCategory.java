@@ -12,7 +12,7 @@ public class TripCategory {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "category_id")
-    private long categoryId;
+    private Long categoryId;
 
     @Column(nullable = false,unique = true,length = 100)
     private String categoryName;
