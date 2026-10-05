@@ -20,4 +20,15 @@ public interface BookingRepository extends JpaRepository<Booking, Long> {
               AND b.bookingStatus != 'Cancelled'
             """)
     Integer sumGuestsByTripId(@Param("tripId") Long tripId);
+
+    @Query("""
+            SELECT b
+            FROM Booking b
+            JOIN FETCH b.trip t
+            JOIN FETCH t.guide g
+            JOIN FETCH g.person p
+            JOIN FETCH b.tourist tourist
+            JOIN FETCH tourist.person touristPerson
+            """)
+    List<Booking> findAllGuideBookings();
 }

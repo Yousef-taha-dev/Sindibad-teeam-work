@@ -7,10 +7,10 @@ import java.util.List;
 
 public interface ReviewService {
 
-    ReviewResponseDTO createReview(
-            Long touristId,
-            ReviewRequestDTO reviewDTO
-    );
+    ReviewResponseDTO createReview(Long touristId, ReviewRequestDTO reviewDTO);
 
     List<ReviewResponseDTO> getReviewsByTripId(Long tripId);
+
+
+    void deleteReview(Long reviewId);
 }

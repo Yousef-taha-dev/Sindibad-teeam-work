@@ -8,5 +8,8 @@ import java.util.Optional;
 
 @Repository
 public interface AdminRepository extends JpaRepository<Admin, Long> {
+
     Optional<Admin> findByPersonPersonId(Long personId);
+
+    boolean existsByPersonPersonId(Long personId);
 }

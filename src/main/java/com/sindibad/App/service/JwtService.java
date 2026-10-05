@@ -3,13 +3,12 @@ package com.sindibad.App.service;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.JwtException;
 import io.jsonwebtoken.Jwts;
-import io.jsonwebtoken.SignatureAlgorithm;
 import io.jsonwebtoken.io.Decoders;
 import io.jsonwebtoken.security.Keys;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
-import java.security.Key;
+import javax.crypto.SecretKey;
 import java.util.Date;
 import java.util.function.Function;
 
@@ -24,7 +23,7 @@ public class JwtService {
 
     // ==================== Signing Key ====================
 
-    private Key getSigningKey() {
+    private SecretKey getSigningKey() {
         byte[] keyBytes = Decoders.BASE64.decode(secretKey);
         return Keys.hmacShaKeyFor(keyBytes);
     }
@@ -33,11 +32,11 @@ public class JwtService {
 
     public String generateToken(String email, String role) {
         return Jwts.builder()
-                .setSubject(email)
+                .subject(email)
                 .claim("role", role)
-                .setIssuedAt(new Date(System.currentTimeMillis()))
-                .setExpiration(new Date(System.currentTimeMillis() + expirationTime))
-                .signWith(getSigningKey(), SignatureAlgorithm.HS256)
+                .issuedAt(new Date(System.currentTimeMillis()))
+                .expiration(new Date(System.currentTimeMillis() + expirationTime))
+                .signWith(getSigningKey()) // بيحدد الخوارزمية تلقائياً حسب نوع الـ Key
                 .compact();
     }
 
@@ -50,32 +49,38 @@ public class JwtService {
     // ==================== Extract Role ====================
 
     public String extractRole(String token) {
-        return extractClaim(token, claims -> claims.get("role", String.class));
+        return extractClaim(
+                token,
+                claims -> claims.get("role", String.class)
+        );
     }
 
     // ==================== Extract Claim ====================
 
-    public <T> T extractClaim(String token, Function<Claims, T> claimsResolver) {
-        final Claims claims = extractAllClaims(token);
+    public <T> T extractClaim(
+            String token,
+            Function<Claims, T> claimsResolver) {
+
+        Claims claims = extractAllClaims(token);
         return claimsResolver.apply(claims);
     }
 
     // ==================== Extract All Claims ====================
 
     private Claims extractAllClaims(String token) {
-        return Jwts.parserBuilder()
-                .setSigningKey(getSigningKey())
+        return Jwts.parser()
+                .verifyWith(getSigningKey())
                 .build()
-                .parseClaimsJws(token)
-                .getBody();
+                .parseSignedClaims(token)
+                .getPayload();
     }
 
     // ==================== Validate Token ====================
 
     public boolean isTokenValid(String token, String userEmail) {
         try {
-            final String username = extractUsername(token);
-            return (username.equals(userEmail)) && !isTokenExpired(token);
+            String username = extractUsername(token);
+            return username.equals(userEmail) && !isTokenExpired(token);
         } catch (JwtException | IllegalArgumentException e) {
             return false;
         }

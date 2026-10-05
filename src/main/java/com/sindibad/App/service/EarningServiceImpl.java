@@ -6,6 +6,7 @@ import com.sindibad.App.repository.EarningRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.math.BigDecimal;
 import java.util.List;
 
 @Service
@@ -41,5 +42,12 @@ public class EarningServiceImpl implements EarningService {
                 .stream()
                 .map(earningMapper::toDto)
                 .toList();
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public BigDecimal getTotalEarningsByGuideId(Long guideId) {
+
+        return earningRepository.sumTotalGuideEarningsByGuideId(guideId);
     }
 }

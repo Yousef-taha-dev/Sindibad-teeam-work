@@ -86,21 +86,26 @@
             <version>${org.mapstruct.version}</version>
         </dependency>
 
-
+        <!-- Springdoc OpenAPI (Swagger UI) for Spring Boot 3 -->
+        <dependency>
+            <groupId>org.springdoc</groupId>
+            <artifactId>springdoc-openapi-starter-webmvc-ui</artifactId>
+            <version>2.5.0</version>
+        </dependency>
         <!-- ==================== JWT ==================== -->
 
         <!-- JWT API -->
         <dependency>
             <groupId>io.jsonwebtoken</groupId>
             <artifactId>jjwt-api</artifactId>
-            <version>0.11.5</version>
+            <version>0.12.5</version>
         </dependency>
 
         <!-- JWT Implementation -->
         <dependency>
             <groupId>io.jsonwebtoken</groupId>
             <artifactId>jjwt-impl</artifactId>
-            <version>0.11.5</version>
+            <version>0.12.5</version>
             <scope>runtime</scope>
         </dependency>
 
@@ -108,7 +113,7 @@
         <dependency>
             <groupId>io.jsonwebtoken</groupId>
             <artifactId>jjwt-jackson</artifactId>
-            <version>0.11.5</version>
+            <version>0.12.5</version>
             <scope>runtime</scope>
         </dependency>
 

@@ -3,6 +3,9 @@ package com.sindibad.App.config;
 import com.sindibad.App.security.JwtAuthenticationFilter;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.HttpMethod;
+import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
@@ -25,40 +28,45 @@ public class SecurityConfig {
     }
 
     @Bean
-    public SecurityFilterChain securityFilterChain(
-            HttpSecurity http) throws Exception {
+    public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
 
         http
-                // JWT REST API لا يحتاج CSRF
+                // إيقاف CSRF لخدمات REST Stateless
                 .csrf(AbstractHttpConfigurer::disable)
 
-                // API بدون Sessions
+                // عدم استخدام Sessions
                 .sessionManagement(session ->
-                        session.sessionCreationPolicy(
-                                SessionCreationPolicy.STATELESS
-                        )
+                        session.sessionCreationPolicy(SessionCreationPolicy.STATELESS)
                 )
 
-                // Authorization
+                // إعدادات الصلاحيات والـ Endpoints
                 .authorizeHttpRequests(auth -> auth
 
                         // Public endpoints
                         .requestMatchers(
-                                "/api/v1/auth/**",
+                                "/api/auth/**",
                                 "/v3/api-docs/**",
-                                "/swagger-ui/**"
+                                "/swagger-ui/**",
+                                "/swagger-ui.html"
                         ).permitAll()
 
-                        // ADMIN only
-                        .requestMatchers(
-                                "/api/v1/admin/**"
-                        ).hasRole("ADMIN")
+                        // السماح باستعراض الرحلات للجميع (اختياري)
+                        .requestMatchers(HttpMethod.GET, "/api/trips/**").permitAll()
 
-                        // Everything else requires authentication
+                        // ADMIN only
+                        .requestMatchers("/api/admin/**").hasRole("ADMIN")
+
+                        // GUIDE only
+                        .requestMatchers("/api/guide/**").hasRole("GUIDE")
+
+                        // TOURIST only
+                        .requestMatchers("/api/tourist/**").hasRole("TOURIST")
+
+                        // أي طلب آخر يتطلب تسجيل دخول
                         .anyRequest().authenticated()
                 )
 
-                // JWT Filter
+                // إضافة فلتر الـ JWT قبل فلتر اسم المستخدم وكلمة المرور
                 .addFilterBefore(
                         jwtAuthFilter,
                         UsernamePasswordAuthenticationFilter.class
@@ -67,9 +75,13 @@ public class SecurityConfig {
         return http.build();
     }
 
-    // BCrypt password hashing
     @Bean
     public PasswordEncoder passwordEncoder() {
         return new BCryptPasswordEncoder();
+    }
+
+    @Bean
+    public AuthenticationManager authenticationManager(AuthenticationConfiguration config) throws Exception {
+        return config.getAuthenticationManager();
     }
 }
