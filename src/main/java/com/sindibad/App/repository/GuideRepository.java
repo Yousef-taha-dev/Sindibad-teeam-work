@@ -11,6 +11,6 @@ import java.util.Optional;
 public interface GuideRepository extends JpaRepository<Guide, Long> {
     List<Guide> findByApprovalStatus(String approvalStatus);
 
-
+    boolean existsByPersonPersonId(Long personId);
     long countByApprovalStatus(String approvalStatus);
 }

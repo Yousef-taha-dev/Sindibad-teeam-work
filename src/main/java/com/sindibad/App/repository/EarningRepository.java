@@ -10,6 +10,12 @@ import java.util.List;
 
 @Repository
 public interface EarningRepository extends JpaRepository<Earning, Long> {
-    @Query("SELECT SUM(e.adminShare) FROM Earning e")
+
+    List<Earning> findByGuideGuideId(Long guideId);
+
+    @Query("""
+            SELECT COALESCE(SUM(e.adminShare), 0)
+            FROM Earning e
+            """)
     BigDecimal sumTotalAdminEarnings();
 }

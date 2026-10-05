@@ -1,7 +1,7 @@
 package com.sindibad.App.dto;
 
 public record TripCategoryDTO(
-        Integer categoryId,
+       Long categoryId,
         String categoryName,
         String description
 ) {}

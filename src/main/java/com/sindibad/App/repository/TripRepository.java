@@ -12,8 +12,8 @@ import java.util.Optional;
 @Repository
 public interface TripRepository extends JpaRepository<Trip, Long> {
 
-    // جلب جميع الرحلات مع Guide + Person + Category
-    // لتجنب N+1 Query
+    // Get all trips with Guide + Person + Category
+    // Helps avoid N+1 queries
     @Query("""
             SELECT t
             FROM Trip t
@@ -24,7 +24,7 @@ public interface TripRepository extends JpaRepository<Trip, Long> {
     List<Trip> findAllWithDetails();
 
 
-    // جلب رحلة واحدة مع Guide + Person + Category
+    // Get one trip with Guide + Person + Category
     @Query("""
             SELECT t
             FROM Trip t
@@ -33,5 +33,19 @@ public interface TripRepository extends JpaRepository<Trip, Long> {
             JOIN FETCH t.category c
             WHERE t.tripId = :tripId
             """)
-    Optional<Trip> findByIdWithDetails(@Param("tripId") Long tripId);
+    Optional<Trip> findByIdWithDetails(
+            @Param("tripId") Long tripId
+    );
+
+
+    // Get trips by status
+    List<Trip> findByTripStatus(String tripStatus);
+
+
+    // Get trips by category
+    List<Trip> findByCategoryCategoryId(Long categoryId);
+
+
+    // Search trips by title
+    List<Trip> findByTitleContainingIgnoreCase(String keyword);
 }

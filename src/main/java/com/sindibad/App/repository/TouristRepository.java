@@ -9,4 +9,5 @@ import java.util.Optional;
 @Repository
 public interface TouristRepository extends JpaRepository<Tourist, Long> {
     Optional<Tourist> findByPersonPersonId(Long personId);
+    boolean existsByPersonPersonId(Long personId);
 }

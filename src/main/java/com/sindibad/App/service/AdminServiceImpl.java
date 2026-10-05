@@ -10,6 +10,7 @@ import com.sindibad.App.mapper.GuideMapper;
 import com.sindibad.App.mapper.TripMapper;
 import com.sindibad.App.repository.*;
 import org.springframework.boot.context.config.ConfigDataResourceNotFoundException;
+import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
@@ -17,6 +18,7 @@ import java.util.List;
 
 import static java.util.stream.Collectors.toList;
 
+@Service
 public class AdminServiceImpl implements  AdminService {
 
 
@@ -31,6 +33,7 @@ public class AdminServiceImpl implements  AdminService {
     private final TripMapper tripMapper;
     private final GuideMapper guideMapper;
     private  final BookingMapper bookingMapper;
+
 
     public AdminServiceImpl
             (PersonRepository personRepository,

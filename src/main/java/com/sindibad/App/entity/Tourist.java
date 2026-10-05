@@ -10,6 +10,7 @@ import org.hibernate.annotations.ColumnDefault;
 @Getter
 @Setter
 public class Tourist {
+
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name="tourist_id")
@@ -24,7 +25,8 @@ public class Tourist {
     )
     private Person person;
 
-    @Column(name="preferred_language",length=50)
+    // تم تعديل اسم المتغير إلى preferredLanguage ليتوافق مع تسميات Java وLombok
+    @Column(name="preferred_language", length=50)
     @ColumnDefault("'English'")
-    private String preferred_language="English";
+    private String preferredLanguage = "English";
 }
