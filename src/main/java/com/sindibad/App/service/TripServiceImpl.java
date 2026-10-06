@@ -16,11 +16,15 @@ public class TripServiceImpl implements TripService {
     private final TripRepository tripRepository;
     private final TripMapper tripMapper;
 
-    public TripServiceImpl(TripRepository tripRepository,
-                           TripMapper tripMapper) {
+    public TripServiceImpl(
+            TripRepository tripRepository,
+            TripMapper tripMapper) {
+
         this.tripRepository = tripRepository;
         this.tripMapper = tripMapper;
     }
+
+    // ==================== Get All Active Trips ====================
 
     @Override
     @Transactional(readOnly = true)
@@ -31,6 +35,8 @@ public class TripServiceImpl implements TripService {
                 .map(tripMapper::toDto)
                 .toList();
     }
+
+    // ==================== Get Trip By ID ====================
 
     @Override
     @Transactional(readOnly = true)
@@ -46,6 +52,8 @@ public class TripServiceImpl implements TripService {
         return tripMapper.toDto(trip);
     }
 
+    // ==================== Get Trips By Category ====================
+
     @Override
     @Transactional(readOnly = true)
     public List<TripResponseDTO> getTripsByCategory(Long categoryId) {
@@ -55,6 +63,20 @@ public class TripServiceImpl implements TripService {
                 .map(tripMapper::toDto)
                 .toList();
     }
+
+    // ==================== Get Trips By Guide ====================
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<TripResponseDTO> getTripsByGuideId(Long guideId) {
+
+        return tripRepository.findByGuideGuideId(guideId)
+                .stream()
+                .map(tripMapper::toDto)
+                .toList();
+    }
+
+    // ==================== Search Trips ====================
 
     @Override
     @Transactional(readOnly = true)

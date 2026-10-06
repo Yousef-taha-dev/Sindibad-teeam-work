@@ -1,0 +1,29 @@
+services:
+
+  postgres:
+    image: postgres:16
+    container_name: sindibad-postgres
+    environment:
+      POSTGRES_DB: postgres
+      POSTGRES_USER: Sindibad
+      POSTGRES_PASSWORD: App1234
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+  backend:
+    image: sindibad-backend:latest
+    container_name: sindibad-backend
+    ports:
+      - "8080:8080"
+    environment:
+      DB_URL: jdbc:postgresql://postgres:5432/postgres
+      DB_USERNAME: Sindibad
+      DB_PASSWORD: App1234
+      JWT_SECRET: change-this-secret
+    depends_on:
+      - postgres
+
+volumes:
+  postgres_data:

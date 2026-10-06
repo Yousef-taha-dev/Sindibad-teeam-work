@@ -1,15 +1,11 @@
 package com.sindibad.App.controller;
 
-import com.sindibad.App.dto.TripRequestDTO;
 import com.sindibad.App.dto.TripResponseDTO;
 import com.sindibad.App.service.TripService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
-import jakarta.validation.Valid;
-import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -18,7 +14,7 @@ import java.util.List;
 @RequestMapping("/api/trips")
 @Tag(
         name = "Trips",
-        description = "Endpoints for browsing, searching, and managing trips"
+        description = "Endpoints for browsing, searching, and viewing trips"
 )
 @SecurityRequirement(name = "bearerAuth")
 public class TripController {
@@ -76,7 +72,7 @@ public class TripController {
     // ==================== Get Trips By Guide ====================
 
     @Operation(
-            summary = "Get trips By Guide",
+            summary = "Get trips by guide",
             description = "Returns all trips assigned to a specific guide."
     )
     @GetMapping("/guide/{guideId}")
@@ -101,60 +97,5 @@ public class TripController {
         return ResponseEntity.ok(
                 tripService.searchTrips(keyword)
         );
-    }
-
-    // ==================== Create Trip ====================
-
-    @Operation(
-            summary = "Create a new trip",
-            description = "Allows the admin to create a group trip and assign an approved guide."
-    )
-    @PostMapping
-    @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<TripResponseDTO> createTrip(
-            @Valid @RequestBody TripRequestDTO tripRequestDTO) {
-
-        TripResponseDTO response =
-                tripService.createTrip(tripRequestDTO);
-
-        return ResponseEntity
-                .status(HttpStatus.CREATED)
-                .body(response);
-    }
-
-    // ==================== Update Trip ====================
-
-    @Operation(
-            summary = "Update an existing trip",
-            description = "Allows the admin to update trip details and guide assignment."
-    )
-    @PutMapping("/{tripId}")
-    @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<TripResponseDTO> updateTrip(
-            @PathVariable Long tripId,
-            @Valid @RequestBody TripRequestDTO tripRequestDTO) {
-
-        return ResponseEntity.ok(
-                tripService.updateTrip(
-                        tripId,
-                        tripRequestDTO
-                )
-        );
-    }
-
-    // ==================== Cancel Trip ====================
-
-    @Operation(
-            summary = "Cancel a trip",
-            description = "Allows the admin to cancel a scheduled trip."
-    )
-    @PutMapping("/{tripId}/cancel")
-    @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<Void> cancelTrip(
-            @PathVariable Long tripId) {
-
-        tripService.cancelTrip(tripId);
-
-        return ResponseEntity.noContent().build();
     }
 }

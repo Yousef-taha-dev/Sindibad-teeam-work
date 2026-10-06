@@ -11,7 +11,6 @@ import com.sindibad.App.repository.ReviewRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-
 import java.util.List;
 
 @Service
@@ -21,9 +20,10 @@ public class ReviewServiceImpl implements ReviewService {
     private final BookingRepository bookingRepository;
     private final ReviewMapper reviewMapper;
 
-    public ReviewServiceImpl(ReviewRepository reviewRepository,
-                             BookingRepository bookingRepository,
-                             ReviewMapper reviewMapper) {
+    public ReviewServiceImpl(
+            ReviewRepository reviewRepository,
+            BookingRepository bookingRepository,
+            ReviewMapper reviewMapper) {
 
         this.reviewRepository = reviewRepository;
         this.bookingRepository = bookingRepository;
@@ -81,7 +81,6 @@ public class ReviewServiceImpl implements ReviewService {
         review.setRating(reviewDTO.rating());
         review.setComment(reviewDTO.comment());
 
-
         // 6. Save review
         Review savedReview = reviewRepository.save(review);
 
@@ -98,5 +97,20 @@ public class ReviewServiceImpl implements ReviewService {
                 .stream()
                 .map(reviewMapper::toDto)
                 .toList();
+    }
+
+    @Override
+    @Transactional
+    public void deleteReview(Long reviewId) {
+
+        Review review = reviewRepository
+                .findById(reviewId)
+                .orElseThrow(() ->
+                        new ResourceNotFoundException(
+                                "Review not found with ID: " + reviewId
+                        )
+                );
+
+        reviewRepository.delete(review);
     }
 }

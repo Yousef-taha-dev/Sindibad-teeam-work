@@ -15,6 +15,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.LocalDateTime;
+import java.util.List;
 
 @Service
 public class PaymentServiceImpl implements PaymentService {
@@ -26,14 +27,17 @@ public class PaymentServiceImpl implements PaymentService {
     private final BookingRepository bookingRepository;
     private final EarningRepository earningRepository;
 
-    public PaymentServiceImpl(PaymentRepository paymentRepository,
-                              BookingRepository bookingRepository,
-                              EarningRepository earningRepository) {
+    public PaymentServiceImpl(
+            PaymentRepository paymentRepository,
+            BookingRepository bookingRepository,
+            EarningRepository earningRepository) {
 
         this.paymentRepository = paymentRepository;
         this.bookingRepository = bookingRepository;
         this.earningRepository = earningRepository;
     }
+
+    // ==================== Process Payment ====================
 
     @Override
     @Transactional
@@ -76,7 +80,9 @@ public class PaymentServiceImpl implements PaymentService {
         BigDecimal amount = booking.getTrip()
                 .getPricePerPerson()
                 .multiply(
-                        BigDecimal.valueOf(booking.getNumberOfGuests())
+                        BigDecimal.valueOf(
+                                booking.getNumberOfGuests()
+                        )
                 )
                 .setScale(2, RoundingMode.HALF_UP);
 
@@ -100,6 +106,7 @@ public class PaymentServiceImpl implements PaymentService {
         // 7. Calculate revenue shares
         // 15% Admin
         // 85% Guide
+
         BigDecimal adminShare = amount
                 .multiply(ADMIN_SHARE_PERCENTAGE)
                 .setScale(2, RoundingMode.HALF_UP);
@@ -119,15 +126,28 @@ public class PaymentServiceImpl implements PaymentService {
         earningRepository.save(earning);
 
         // 9. Return response
-        return new PaymentResponseDTO(
-                savedPayment.getPaymentId(),
-                savedPayment.getBooking().getBookingId(),
-                savedPayment.getAmount(),
-                savedPayment.getPaymentMethod(),
-                savedPayment.getPaymentStatus(),
-                savedPayment.getPaidAt()
-        );
+        return toPaymentResponseDTO(savedPayment);
     }
+
+    // ==================== Get Payment By ID ====================
+
+    @Override
+    @Transactional(readOnly = true)
+    public PaymentResponseDTO getPaymentById(Long paymentId) {
+
+        Payment payment = paymentRepository
+                .findById(paymentId)
+                .orElseThrow(() ->
+                        new ResourceNotFoundException(
+                                "Payment not found with ID: "
+                                        + paymentId
+                        )
+                );
+
+        return toPaymentResponseDTO(payment);
+    }
+
+    // ==================== Get Payment By Booking ID ====================
 
     @Override
     @Transactional(readOnly = true)
@@ -141,6 +161,26 @@ public class PaymentServiceImpl implements PaymentService {
                                         + bookingId
                         )
                 );
+
+        return toPaymentResponseDTO(payment);
+    }
+
+    // ==================== Get All Payments ====================
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<PaymentResponseDTO> getAllPayments() {
+
+        return paymentRepository.findAll()
+                .stream()
+                .map(this::toPaymentResponseDTO)
+                .toList();
+    }
+
+    // ==================== Mapper Helper ====================
+
+    private PaymentResponseDTO toPaymentResponseDTO(
+            Payment payment) {
 
         return new PaymentResponseDTO(
                 payment.getPaymentId(),

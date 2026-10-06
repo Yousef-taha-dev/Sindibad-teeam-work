@@ -12,24 +12,29 @@ import java.util.Optional;
 @Repository
 public interface TripRepository extends JpaRepository<Trip, Long> {
 
-    // Get all trips with Guide + Person + Category
-    // Helps avoid N+1 queries
+    // ==================== Active / Upcoming Trips ====================
+
+    List<Trip> findByTripStatus(String tripStatus);
+
+    // ==================== Trips By Category ====================
+
+    List<Trip> findByCategoryCategoryId(Long categoryId);
+
+    // ==================== Trips By Guide ====================
+
+    List<Trip> findByGuideGuideId(Long guideId);
+
+    // ==================== Search Trips ====================
+
+    List<Trip> findByTitleContainingIgnoreCase(String keyword);
+
+    // ==================== Get Trip With Details ====================
+
     @Query("""
             SELECT t
             FROM Trip t
             JOIN FETCH t.guide g
-            JOIN FETCH g.person p
-            JOIN FETCH t.category c
-            """)
-    List<Trip> findAllWithDetails();
-
-
-    // Get one trip with Guide + Person + Category
-    @Query("""
-            SELECT t
-            FROM Trip t
-            JOIN FETCH t.guide g
-            JOIN FETCH g.person p
+            JOIN FETCH g.person
             JOIN FETCH t.category c
             WHERE t.tripId = :tripId
             """)
@@ -37,15 +42,14 @@ public interface TripRepository extends JpaRepository<Trip, Long> {
             @Param("tripId") Long tripId
     );
 
+    // ==================== Get All Trips With Details ====================
 
-    // Get trips by status
-    List<Trip> findByTripStatus(String tripStatus);
-
-
-    // Get trips by category
-    List<Trip> findByCategoryCategoryId(Long categoryId);
-
-
-    // Search trips by title
-    List<Trip> findByTitleContainingIgnoreCase(String keyword);
+    @Query("""
+            SELECT t
+            FROM Trip t
+            JOIN FETCH t.guide g
+            JOIN FETCH g.person
+            JOIN FETCH t.category c
+            """)
+    List<Trip> findAllWithDetails();
 }
