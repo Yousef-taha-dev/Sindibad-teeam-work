@@ -2,10 +2,15 @@ package com.sindibad.App.controller;
 
 import com.sindibad.App.dto.*;
 import com.sindibad.App.service.AdminService;
+
 import jakarta.validation.Valid;
+
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
 
@@ -19,13 +24,18 @@ public class AdminController {
         this.adminService = adminService;
     }
 
+
     // ----------------- Dashboard Statistics -----------------
 
     // GET /api/admin/dashboard/stats
     @GetMapping("/dashboard/stats")
     public ResponseEntity<AdminDashboardStatsDTO> getDashboardStats() {
-        return ResponseEntity.ok(adminService.getDashboardStats());
+
+        return ResponseEntity.ok(
+                adminService.getDashboardStats()
+        );
     }
+
 
     // ----------------- Trips Management -----------------
 
@@ -39,6 +49,7 @@ public class AdminController {
                 .body(adminService.createTrip(tripRequestDTO));
     }
 
+
     // PUT /api/admin/trips/{id}
     @PutMapping("/trips/{id}")
     public ResponseEntity<TripResponseDTO> updateTrip(
@@ -50,6 +61,22 @@ public class AdminController {
         );
     }
 
+
+    // POST /api/admin/trips/{id}/image
+    @PostMapping(
+            value = "/trips/{id}/image",
+            consumes = MediaType.MULTIPART_FORM_DATA_VALUE
+    )
+    public ResponseEntity<TripResponseDTO> uploadTripImage(
+            @PathVariable Long id,
+            @RequestParam("image") MultipartFile image) {
+
+        return ResponseEntity.ok(
+                adminService.uploadTripImage(id, image)
+        );
+    }
+
+
     // GET /api/admin/trips/{id}
     @GetMapping("/trips/{id}")
     public ResponseEntity<TripResponseDTO> getTripById(
@@ -60,6 +87,17 @@ public class AdminController {
         );
     }
 
+
+    // GET /api/admin/trips
+    @GetMapping("/trips")
+    public ResponseEntity<List<TripResponseDTO>> getAllTrips() {
+
+        return ResponseEntity.ok(
+                adminService.getAllTrips()
+        );
+    }
+
+
     // DELETE /api/admin/trips/{id}
     @DeleteMapping("/trips/{id}")
     public ResponseEntity<Void> deleteTrip(
@@ -69,6 +107,7 @@ public class AdminController {
 
         return ResponseEntity.noContent().build();
     }
+
 
     // ----------------- Guides Management -----------------
 
@@ -81,6 +120,7 @@ public class AdminController {
         );
     }
 
+
     // PUT /api/admin/guides/{id}/approval?status=Approved
     @PutMapping("/guides/{id}/approval")
     public ResponseEntity<Void> processGuideApproval(
@@ -92,6 +132,7 @@ public class AdminController {
         return ResponseEntity.ok().build();
     }
 
+
     // DELETE /api/admin/guides/{id}
     @DeleteMapping("/guides/{id}")
     public ResponseEntity<Void> deleteGuide(
@@ -101,6 +142,7 @@ public class AdminController {
 
         return ResponseEntity.noContent().build();
     }
+
 
     // ----------------- Direct Guide Bookings -----------------
 
@@ -113,4 +155,3 @@ public class AdminController {
         );
     }
 }
-

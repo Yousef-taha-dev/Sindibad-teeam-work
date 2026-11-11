@@ -63,6 +63,8 @@ public class Trip {
     @ColumnDefault("'Trip New'")
     private String tripStatus = "Trip New";
 
-    @Column(name = "trip_image_url", length = 255)
+    @Column(name = "trip_image_url", length = 1000)
     private String tripImageUrl;
+    @Column(name = "trip_image_public_id", length = 255)
+    private String tripImagePublicId;
 }

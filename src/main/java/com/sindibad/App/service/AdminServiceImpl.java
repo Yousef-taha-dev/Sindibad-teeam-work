@@ -9,14 +9,25 @@ import com.sindibad.App.mapper.BookingMapper;
 import com.sindibad.App.mapper.GuideMapper;
 import com.sindibad.App.mapper.TripMapper;
 import com.sindibad.App.repository.*;
+
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
+import org.springframework.web.multipart.MultipartFile;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import java.io.IOException;
 import java.math.BigDecimal;
 import java.util.List;
 
 @Service
 public class AdminServiceImpl implements AdminService {
+
+    private static final Logger log =
+            LoggerFactory.getLogger(AdminServiceImpl.class);
 
     private final PersonRepository personRepository;
     private final GuideRepository guideRepository;
@@ -30,6 +41,8 @@ public class AdminServiceImpl implements AdminService {
     private final GuideMapper guideMapper;
     private final BookingMapper bookingMapper;
 
+    private final ImageUploadService imageUploadService;
+
     public AdminServiceImpl(
             PersonRepository personRepository,
             GuideRepository guideRepository,
@@ -40,7 +53,8 @@ public class AdminServiceImpl implements AdminService {
             EarningRepository earningRepository,
             TripMapper tripMapper,
             GuideMapper guideMapper,
-            BookingMapper bookingMapper) {
+            BookingMapper bookingMapper,
+            ImageUploadService imageUploadService) {
 
         this.personRepository = personRepository;
         this.guideRepository = guideRepository;
@@ -49,9 +63,12 @@ public class AdminServiceImpl implements AdminService {
         this.tripCategoryRepository = tripCategoryRepository;
         this.bookingRepository = bookingRepository;
         this.earningRepository = earningRepository;
+
         this.tripMapper = tripMapper;
         this.guideMapper = guideMapper;
         this.bookingMapper = bookingMapper;
+
+        this.imageUploadService = imageUploadService;
     }
 
     // ==================== Trips Management ====================
@@ -69,8 +86,7 @@ public class AdminServiceImpl implements AdminService {
         Guide guide = guideRepository.findById(tripDTO.guideId())
                 .orElseThrow(() ->
                         new ResourceNotFoundException(
-                                "Guide not found with ID: "
-                                        + tripDTO.guideId()
+                                "Guide not found with ID: " + tripDTO.guideId()
                         )
                 );
 
@@ -163,7 +179,8 @@ public class AdminServiceImpl implements AdminService {
         trip.setEndDate(tripDTO.endDate());
         trip.setMaxParticipants(tripDTO.maxParticipants());
         trip.setPricePerPerson(tripDTO.pricePerPerson());
-        trip.setTripImageUrl(tripDTO.tripImageUrl());
+
+        // Keep the existing image during normal trip updates.
 
         Trip updatedTrip = tripRepository.save(trip);
 
@@ -205,6 +222,103 @@ public class AdminServiceImpl implements AdminService {
         }
 
         tripRepository.deleteById(tripId);
+    }
+
+    // ==================== Upload / Replace Trip Image ====================
+
+    @Override
+    @Transactional
+    public TripResponseDTO uploadTripImage(
+            Long tripId,
+            MultipartFile image) {
+
+        // 1. Check whether the trip exists
+        Trip trip = tripRepository.findById(tripId)
+                .orElseThrow(() ->
+                        new ResourceNotFoundException(
+                                "Trip not found with ID: " + tripId
+                        )
+                );
+
+        // 2. Upload new image to Cloudinary
+        // Handle IOException because uploadImage may throw it.
+        ImageUploadResult uploaded;
+
+        try {
+            uploaded = imageUploadService.uploadImage(image, "trips");
+
+        } catch (IOException exception) {
+
+            log.error(
+                    "Failed to upload trip image to Cloudinary",
+                    exception
+            );
+
+            throw new RuntimeException(
+                    "Failed to upload trip image",
+                    exception
+            );
+        }
+
+        String oldPublicId = trip.getTripImagePublicId();
+
+        try {
+
+            // 3. Update image information
+            trip.setTripImageUrl(uploaded.secureUrl());
+            trip.setTripImagePublicId(uploaded.publicId());
+
+            // 4. Save and flush database changes
+            Trip savedTrip = tripRepository.saveAndFlush(trip);
+
+            TripResponseDTO response = tripMapper.toDto(savedTrip);
+
+            // 5. Delete old image only after successful commit
+            if (oldPublicId != null
+                    && !oldPublicId.isBlank()
+                    && !oldPublicId.equals(uploaded.publicId())) {
+
+                TransactionSynchronizationManager.registerSynchronization(
+                        new TransactionSynchronization() {
+
+                            @Override
+                            public void afterCommit() {
+
+                                try {
+                                    imageUploadService.deleteImage(oldPublicId);
+
+                                } catch (Exception exception) {
+
+                                    log.error(
+                                            "Failed to delete old Cloudinary image: {}",
+                                            oldPublicId,
+                                            exception
+                                    );
+                                }
+                            }
+                        }
+                );
+            }
+
+            return response;
+
+        } catch (RuntimeException exception) {
+
+            // 6. Clean up the new image if database update fails
+            try {
+                imageUploadService.deleteImage(uploaded.publicId());
+
+            } catch (Exception cleanupException) {
+
+                log.error(
+                        "Failed to clean up new Cloudinary image: {}",
+                        uploaded.publicId(),
+                        cleanupException
+                );
+            }
+
+            throw exception;
+        }
     }
 
     // ==================== Guides Management ====================

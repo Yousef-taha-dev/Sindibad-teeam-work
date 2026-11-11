@@ -7,6 +7,7 @@ import jakarta.validation.constraints.Size;
 import java.time.LocalDate;
 
 public record RegisterRequestDTO(
+
         @NotBlank(message = "First name is required")
         @Size(max = 50)
         String firstName,
@@ -21,7 +22,7 @@ public record RegisterRequestDTO(
         String email,
 
         @NotBlank(message = "Password is required")
-        @Size(min = 6, message = "Password must be at least 6 characters")
+        @Size(min = 8, message = "Password must be at least 6 characters")
         String password,
 
         @NotBlank(message = "Phone number is required")
@@ -33,10 +34,6 @@ public record RegisterRequestDTO(
 
         LocalDate dateOfBirth,
 
-        String nationality,
+        String nationality
 
-        @NotBlank(message = "Role is required")
-        String role
-) {
-
-}
+) {}

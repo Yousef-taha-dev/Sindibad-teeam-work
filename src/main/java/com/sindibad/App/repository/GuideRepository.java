@@ -13,4 +13,5 @@ public interface GuideRepository extends JpaRepository<Guide, Long> {
 
     boolean existsByPersonPersonId(Long personId);
     long countByApprovalStatus(String approvalStatus);
+    Optional<Guide> findByPersonPersonId(Long personId);
 }

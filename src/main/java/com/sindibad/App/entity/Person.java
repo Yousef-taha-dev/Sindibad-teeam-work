@@ -42,6 +42,9 @@ public class Person {
     @Column(name = "profile_image", length = 500)
     private String profileImage;
 
+    @Column(name = "profile_image_public_id", length = 255)
+    private String profileImagePublicId;
+
     @Column(name = "account_status", length = 20)
     @ColumnDefault("'Active'")
     private String accountStatus = "Active";

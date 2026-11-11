@@ -1,3 +1,4 @@
+
 package com.sindibad.App.service;
 
 import com.sindibad.App.dto.AuthResponseDTO;
@@ -56,8 +57,7 @@ public class AuthServiceImpl implements AuthService {
 
         if (personRepository.existsByEmail(registerDTO.email())) {
             throw new IllegalArgumentException(
-                    "Email is already in use: "
-                            + registerDTO.email()
+                    "Email is already in use: " + registerDTO.email()
             );
         }
 
@@ -72,6 +72,7 @@ public class AuthServiceImpl implements AuthService {
 
         Person savedPerson = personRepository.save(person);
 
+        // Create Tourist account
         Tourist tourist = new Tourist();
         tourist.setPerson(savedPerson);
         tourist.setPreferredLanguage("English");
@@ -106,13 +107,11 @@ public class AuthServiceImpl implements AuthService {
 
         if (personRepository.existsByEmail(personalInfo.email())) {
             throw new IllegalArgumentException(
-                    "Email is already in use: "
-                            + personalInfo.email()
+                    "Email is already in use: " + personalInfo.email()
             );
         }
 
-        Person person =
-                personMapper.toEntity(personalInfo);
+        Person person = personMapper.toEntity(personalInfo);
 
         // Hash password using BCrypt
         person.setPassword(
@@ -121,18 +120,16 @@ public class AuthServiceImpl implements AuthService {
 
         person.setAccountStatus("Active");
 
-        Person savedPerson =
-                personRepository.save(person);
+        Person savedPerson = personRepository.save(person);
 
+        // Create Guide account
         Guide guide = new Guide();
 
         guide.setPerson(savedPerson);
         guide.setBio(guideDTO.bio());
-        guide.setExperienceYears(
-                guideDTO.experienceYears()
-        );
+        guide.setExperienceYears(guideDTO.experienceYears());
 
-        // Guide must be approved by admin
+        // Wait for admin approval
         guide.setApprovalStatus("Pending");
 
         guideRepository.save(guide);
@@ -140,14 +137,9 @@ public class AuthServiceImpl implements AuthService {
         PersonResponseDTO personResponseDTO =
                 personMapper.toDto(savedPerson);
 
-        // Generate JWT
-        String token = jwtService.generateToken(
-                savedPerson.getEmail(),
-                "GUIDE"
-        );
-
+        // No JWT before admin approval
         return new AuthResponseDTO(
-                token,
+                null,
                 "GUIDE",
                 personResponseDTO
         );
@@ -157,8 +149,7 @@ public class AuthServiceImpl implements AuthService {
 
     @Override
     @Transactional(readOnly = true)
-    public AuthResponseDTO login(
-            LoginRequestDTO loginDTO) {
+    public AuthResponseDTO login(LoginRequestDTO loginDTO) {
 
         Person person = personRepository
                 .findByEmail(loginDTO.email())
@@ -178,6 +169,13 @@ public class AuthServiceImpl implements AuthService {
             );
         }
 
+        // Check account status
+        if (!"Active".equalsIgnoreCase(person.getAccountStatus())) {
+            throw new BadCredentialsException(
+                    "Your account is not active."
+            );
+        }
+
         String role;
 
         // Check Admin first
@@ -193,15 +191,26 @@ public class AuthServiceImpl implements AuthService {
             role = "TOURIST";
 
             // Check Guide
-        } else if (guideRepository.existsByPersonPersonId(
-                person.getPersonId())) {
-
-            role = "GUIDE";
-
-            // Unknown user
         } else {
 
-            role = "USER";
+            Guide guide = guideRepository
+                    .findByPersonPersonId(person.getPersonId())
+                    .orElseThrow(() ->
+                            new BadCredentialsException(
+                                    "Invalid email or password."
+                            )
+                    );
+
+            // Guide must be approved by admin
+            if (!"Approved".equalsIgnoreCase(
+                    guide.getApprovalStatus())) {
+
+                throw new BadCredentialsException(
+                        "Your guide account is not approved yet."
+                );
+            }
+
+            role = "GUIDE";
         }
 
         PersonResponseDTO personResponseDTO =
