@@ -3,6 +3,7 @@ package com.sindibad.App.dto;
 import jakarta.validation.constraints.DecimalMin;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Size;
 
 import java.math.BigDecimal;
 
@@ -15,5 +16,6 @@ public record PaymentRequestDTO(
         BigDecimal amount,
 
         @NotBlank(message = "Payment method is required")
+        @Size(max = 50, message = "Payment method cannot exceed 50 characters")
         String paymentMethod
 ) {}

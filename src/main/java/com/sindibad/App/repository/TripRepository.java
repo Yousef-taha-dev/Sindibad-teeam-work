@@ -20,6 +20,8 @@ public interface TripRepository extends JpaRepository<Trip, Long> {
 
     List<Trip> findByCategoryCategoryId(Long categoryId);
 
+    boolean existsByCategoryCategoryId(Long categoryId);
+
     // ==================== Trips By Guide ====================
 
     List<Trip> findByGuideGuideId(Long guideId);

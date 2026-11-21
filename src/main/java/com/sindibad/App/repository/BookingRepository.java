@@ -13,13 +13,17 @@ public interface BookingRepository extends JpaRepository<Booking, Long> {
 
     List<Booking> findByTouristTouristId(Long touristId);
 
+    boolean existsByTripTripId(Long tripId);
+
+    boolean existsByTripTripIdAndBookingStatus(Long tripId, String bookingStatus);
+
     @Query("""
             SELECT COALESCE(SUM(b.numberOfGuests), 0)
             FROM Booking b
             WHERE b.trip.tripId = :tripId
               AND b.bookingStatus != 'Cancelled'
             """)
-    Integer sumGuestsByTripId(@Param("tripId") Long tripId);
+    Long sumGuestsByTripId(@Param("tripId") Long tripId);
 
     @Query("""
             SELECT b

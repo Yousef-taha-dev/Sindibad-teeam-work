@@ -8,8 +8,14 @@ public interface EarningService {
 
     List<EarningResponseDTO> getAllEarnings();
 
-    List<EarningResponseDTO> getEarningsByGuideId(Long guideId);
+    List<EarningResponseDTO> getEarningsByGuideId(
+            Long guideId,
+            String actorEmail,
+            boolean admin);
 
     // أضف هذا السطر
-    BigDecimal getTotalEarningsByGuideId(Long guideId);
+    BigDecimal getTotalEarningsByGuideId(
+            Long guideId,
+            String actorEmail,
+            boolean admin);
 }

@@ -9,7 +9,10 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.GrantedAuthority;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -38,14 +41,42 @@ public class PaymentController {
     @PostMapping
     @PreAuthorize("hasAnyRole('TOURIST', 'ADMIN')")
     public ResponseEntity<PaymentResponseDTO> processPayment(
-            @Valid @RequestBody PaymentRequestDTO paymentRequestDTO) {
+            @Valid @RequestBody PaymentRequestDTO paymentRequestDTO,
+            Authentication authentication) {
+
+        if (authentication == null
+                || authentication.getName() == null
+                || authentication.getName().isBlank()) {
+            throw new AccessDeniedException(
+                    "You can only pay for your own booking."
+            );
+        }
 
         PaymentResponseDTO response =
-                paymentService.processPayment(paymentRequestDTO);
+                paymentService.processPayment(
+                        paymentRequestDTO,
+                        authentication.getName(),
+                        isAdmin(authentication)
+                );
 
         return ResponseEntity
                 .status(HttpStatus.CREATED)
                 .body(response);
+    }
+
+    private boolean isAdmin(Authentication authentication) {
+
+        if (authentication.getAuthorities() == null) {
+            return false;
+        }
+
+        for (GrantedAuthority authority : authentication.getAuthorities()) {
+            if ("ROLE_ADMIN".equals(authority.getAuthority())) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     // ==================== Get Payment By ID ====================
@@ -57,10 +88,23 @@ public class PaymentController {
     @GetMapping("/{paymentId}")
     @PreAuthorize("hasAnyRole('TOURIST', 'ADMIN')")
     public ResponseEntity<PaymentResponseDTO> getPaymentById(
-            @PathVariable Long paymentId) {
+            @PathVariable Long paymentId,
+            Authentication authentication) {
+
+        if (authentication == null
+                || authentication.getName() == null
+                || authentication.getName().isBlank()) {
+            throw new AccessDeniedException(
+                    "You can only view your own payment."
+            );
+        }
 
         return ResponseEntity.ok(
-                paymentService.getPaymentById(paymentId)
+                paymentService.getPaymentById(
+                        paymentId,
+                        authentication.getName(),
+                        isAdmin(authentication)
+                )
         );
     }
 
@@ -73,10 +117,23 @@ public class PaymentController {
     @GetMapping("/booking/{bookingId}")
     @PreAuthorize("hasAnyRole('TOURIST', 'ADMIN')")
     public ResponseEntity<PaymentResponseDTO> getPaymentByBookingId(
-            @PathVariable Long bookingId) {
+            @PathVariable Long bookingId,
+            Authentication authentication) {
+
+        if (authentication == null
+                || authentication.getName() == null
+                || authentication.getName().isBlank()) {
+            throw new AccessDeniedException(
+                    "You can only view your own payment."
+            );
+        }
 
         return ResponseEntity.ok(
-                paymentService.getPaymentByBookingId(bookingId)
+                paymentService.getPaymentByBookingId(
+                        bookingId,
+                        authentication.getName(),
+                        isAdmin(authentication)
+                )
         );
     }
 

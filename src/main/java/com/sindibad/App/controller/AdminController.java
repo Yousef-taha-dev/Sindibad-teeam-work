@@ -2,6 +2,7 @@ package com.sindibad.App.controller;
 
 import com.sindibad.App.dto.*;
 import com.sindibad.App.service.AdminService;
+import com.sindibad.App.service.TripCategoryService;
 
 import jakarta.validation.Valid;
 
@@ -19,9 +20,13 @@ import java.util.List;
 public class AdminController {
 
     private final AdminService adminService;
+    private final TripCategoryService tripCategoryService;
 
-    public AdminController(AdminService adminService) {
+    public AdminController(
+            AdminService adminService,
+            TripCategoryService tripCategoryService) {
         this.adminService = adminService;
+        this.tripCategoryService = tripCategoryService;
     }
 
 
@@ -104,6 +109,42 @@ public class AdminController {
             @PathVariable Long id) {
 
         adminService.deleteTrip(id);
+
+        return ResponseEntity.noContent().build();
+    }
+
+
+    // ----------------- Categories Management -----------------
+
+    // POST /api/admin/categories
+    @PostMapping("/categories")
+    public ResponseEntity<TripCategoryDTO> createCategory(
+            @RequestBody TripCategoryDTO categoryDTO) {
+
+        return ResponseEntity
+                .status(HttpStatus.CREATED)
+                .body(tripCategoryService.createCategory(categoryDTO));
+    }
+
+
+    // PUT /api/admin/categories/{categoryId}
+    @PutMapping("/categories/{categoryId}")
+    public ResponseEntity<TripCategoryDTO> updateCategory(
+            @PathVariable Long categoryId,
+            @RequestBody TripCategoryDTO categoryDTO) {
+
+        return ResponseEntity.ok(
+                tripCategoryService.updateCategory(categoryId, categoryDTO)
+        );
+    }
+
+
+    // DELETE /api/admin/categories/{categoryId}
+    @DeleteMapping("/categories/{categoryId}")
+    public ResponseEntity<Void> deleteCategory(
+            @PathVariable Long categoryId) {
+
+        tripCategoryService.deleteCategory(categoryId);
 
         return ResponseEntity.noContent().build();
     }

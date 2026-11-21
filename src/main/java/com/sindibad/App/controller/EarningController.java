@@ -6,7 +6,10 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.GrantedAuthority;
 import org.springframework.web.bind.annotation.*;
 
 import java.math.BigDecimal;
@@ -51,10 +54,23 @@ public class EarningController {
     @GetMapping("/guide/{guideId}")
     @PreAuthorize("hasAnyRole('GUIDE', 'ADMIN')")
     public ResponseEntity<List<EarningResponseDTO>> getEarningsByGuideId(
-            @PathVariable Long guideId) {
+            @PathVariable Long guideId,
+            Authentication authentication) {
+
+        if (authentication == null
+                || authentication.getName() == null
+                || authentication.getName().isBlank()) {
+            throw new AccessDeniedException(
+                    "You can only view your own earnings."
+            );
+        }
 
         return ResponseEntity.ok(
-                earningService.getEarningsByGuideId(guideId)
+                earningService.getEarningsByGuideId(
+                        guideId,
+                        authentication.getName(),
+                        isAdmin(authentication)
+                )
         );
     }
 
@@ -67,10 +83,38 @@ public class EarningController {
     @GetMapping("/guide/{guideId}/total")
     @PreAuthorize("hasAnyRole('GUIDE', 'ADMIN')")
     public ResponseEntity<BigDecimal> getTotalEarningsByGuideId(
-            @PathVariable Long guideId) {
+            @PathVariable Long guideId,
+            Authentication authentication) {
+
+        if (authentication == null
+                || authentication.getName() == null
+                || authentication.getName().isBlank()) {
+            throw new AccessDeniedException(
+                    "You can only view your own earnings."
+            );
+        }
 
         return ResponseEntity.ok(
-                earningService.getTotalEarningsByGuideId(guideId)
+                earningService.getTotalEarningsByGuideId(
+                        guideId,
+                        authentication.getName(),
+                        isAdmin(authentication)
+                )
         );
+    }
+
+    private boolean isAdmin(Authentication authentication) {
+
+        if (authentication.getAuthorities() == null) {
+            return false;
+        }
+
+        for (GrantedAuthority authority : authentication.getAuthorities()) {
+            if ("ROLE_ADMIN".equals(authority.getAuthority())) {
+                return true;
+            }
+        }
+
+        return false;
     }
 }

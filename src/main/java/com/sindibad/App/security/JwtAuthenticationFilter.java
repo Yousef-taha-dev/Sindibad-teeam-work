@@ -1,5 +1,9 @@
 package com.sindibad.App.security;
 
+import com.sindibad.App.entity.Guide;
+import com.sindibad.App.entity.Person;
+import com.sindibad.App.repository.GuideRepository;
+import com.sindibad.App.repository.PersonRepository;
 import com.sindibad.App.service.JwtService;
 import io.jsonwebtoken.JwtException;
 import jakarta.servlet.FilterChain;
@@ -22,9 +26,16 @@ import java.util.List;
 public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
     private final JwtService jwtService;
+    private final PersonRepository personRepository;
+    private final GuideRepository guideRepository;
 
-    public JwtAuthenticationFilter(JwtService jwtService) {
+    public JwtAuthenticationFilter(
+            JwtService jwtService,
+            PersonRepository personRepository,
+            GuideRepository guideRepository) {
         this.jwtService = jwtService;
+        this.personRepository = personRepository;
+        this.guideRepository = guideRepository;
     }
 
     @Override
@@ -55,8 +66,10 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             if (email != null &&
                     SecurityContextHolder.getContext().getAuthentication() == null) {
 
-                // 6. Validate token
-                if (jwtService.isTokenValid(token, email)) {
+                // 6. Validate token. A GUIDE token is accepted only
+                // while that guide account is still active and approved.
+                if (jwtService.isTokenValid(token, email)
+                        && guideTokenAllowsAuthentication(email, role)) {
 
                     // 7. Convert role to Spring Security authority
                     List<SimpleGrantedAuthority> authorities =
@@ -102,5 +115,37 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
         // 11. Continue request
         filterChain.doFilter(request, response);
+    }
+
+    private boolean guideTokenAllowsAuthentication(String email, String role) {
+        if (!isGuideRole(role)) {
+            return true;
+        }
+
+        Person person = personRepository.findByEmail(email).orElse(null);
+        if (person == null
+                || person.getPersonId() == null
+                || !"Active".equalsIgnoreCase(person.getAccountStatus())) {
+            return false;
+        }
+
+        Guide guide = guideRepository
+                .findByPersonPersonId(person.getPersonId())
+                .orElse(null);
+
+        return guide != null
+                && "Approved".equalsIgnoreCase(guide.getApprovalStatus());
+    }
+
+    private boolean isGuideRole(String role) {
+        if (role == null || role.isBlank()) {
+            return false;
+        }
+
+        String normalized = role.startsWith("ROLE_")
+                ? role.substring("ROLE_".length())
+                : role;
+
+        return "GUIDE".equalsIgnoreCase(normalized);
     }
 }

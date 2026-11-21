@@ -53,6 +53,8 @@ public class SecurityConfig {
                         // السماح باستعراض الرحلات للجميع (اختياري)
                         .requestMatchers(HttpMethod.GET, "/api/trips/**").permitAll()
 
+                        .requestMatchers(HttpMethod.GET, "/api/categories").permitAll()
+
                         // ADMIN only
                         .requestMatchers("/api/admin/**").hasRole("ADMIN")
 

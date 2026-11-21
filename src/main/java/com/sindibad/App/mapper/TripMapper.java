@@ -20,6 +20,8 @@ public interface TripMapper {
     @Mapping(target = "tripStatus", ignore = true)
     @Mapping(target = "guide", ignore = true)
     @Mapping(target = "category", ignore = true)
+    @Mapping(target = "tripImageUrl", ignore = true)
+    @Mapping(target = "tripImagePublicId", ignore = true)
     Trip toEntity(TripRequestDTO dto);
 
     @Named("getTripGuideFullName")

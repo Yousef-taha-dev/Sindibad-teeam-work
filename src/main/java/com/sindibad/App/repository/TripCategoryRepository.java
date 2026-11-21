@@ -9,5 +9,8 @@ import java.util.Optional;
 @Repository
 public interface TripCategoryRepository extends JpaRepository<TripCategory, Long> {
     Optional<TripCategory> findByCategoryName(String categoryName);
+
     boolean existsByCategoryName(String categoryName);
+
+    boolean existsByCategoryNameAndCategoryIdNot(String categoryName, Long categoryId);
 }

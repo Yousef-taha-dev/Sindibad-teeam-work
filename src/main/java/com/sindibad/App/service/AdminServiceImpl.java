@@ -10,6 +10,10 @@ import com.sindibad.App.mapper.GuideMapper;
 import com.sindibad.App.mapper.TripMapper;
 import com.sindibad.App.repository.*;
 
+import jakarta.persistence.EntityManager;
+import jakarta.persistence.LockModeType;
+import jakarta.persistence.PersistenceContext;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.transaction.support.TransactionSynchronization;
@@ -43,6 +47,10 @@ public class AdminServiceImpl implements AdminService {
 
     private final ImageUploadService imageUploadService;
 
+    @PersistenceContext
+    private EntityManager entityManager;
+
+    @Autowired
     public AdminServiceImpl(
             PersonRepository personRepository,
             GuideRepository guideRepository,
@@ -55,6 +63,35 @@ public class AdminServiceImpl implements AdminService {
             GuideMapper guideMapper,
             BookingMapper bookingMapper,
             ImageUploadService imageUploadService) {
+        this(
+                personRepository,
+                guideRepository,
+                touristRepository,
+                tripRepository,
+                tripCategoryRepository,
+                bookingRepository,
+                earningRepository,
+                tripMapper,
+                guideMapper,
+                bookingMapper,
+                imageUploadService,
+                null
+        );
+    }
+
+    AdminServiceImpl(
+            PersonRepository personRepository,
+            GuideRepository guideRepository,
+            TouristRepository touristRepository,
+            TripRepository tripRepository,
+            TripCategoryRepository tripCategoryRepository,
+            BookingRepository bookingRepository,
+            EarningRepository earningRepository,
+            TripMapper tripMapper,
+            GuideMapper guideMapper,
+            BookingMapper bookingMapper,
+            ImageUploadService imageUploadService,
+            EntityManager entityManager) {
 
         this.personRepository = personRepository;
         this.guideRepository = guideRepository;
@@ -69,6 +106,7 @@ public class AdminServiceImpl implements AdminService {
         this.bookingMapper = bookingMapper;
 
         this.imageUploadService = imageUploadService;
+        this.entityManager = entityManager;
     }
 
     // ==================== Trips Management ====================
@@ -109,6 +147,7 @@ public class AdminServiceImpl implements AdminService {
 
         trip.setGuide(guide);
         trip.setCategory(tripCategory);
+        trip.setTripStatus("Upcoming");
 
         Trip savedTrip = tripRepository.save(trip);
 
@@ -131,6 +170,34 @@ public class AdminServiceImpl implements AdminService {
         if (tripDTO.endDate().isBefore(tripDTO.startDate())) {
             throw new IllegalArgumentException(
                     "End date cannot be before start date"
+            );
+        }
+
+        entityManager.refresh(trip, LockModeType.PESSIMISTIC_WRITE);
+
+        long bookedGuests =
+                bookingRepository.sumGuestsByTripId(trip.getTripId());
+
+        if (tripDTO.maxParticipants() < bookedGuests) {
+            throw new IllegalArgumentException(
+                    "Maximum participants cannot be lower than the number of guests already booked."
+            );
+        }
+
+        if (trip.getPricePerPerson().compareTo(tripDTO.pricePerPerson()) != 0
+                && bookingRepository.existsByTripTripIdAndBookingStatus(
+                        trip.getTripId(), "Pending")) {
+            throw new IllegalArgumentException(
+                    "The trip price cannot be changed while pending bookings exist."
+            );
+        }
+
+        if (bookedGuests > 0
+                && (!trip.getStartDate().equals(tripDTO.startDate())
+                || !trip.getEndDate().equals(tripDTO.endDate())
+                || !trip.getGuide().getGuideId().equals(tripDTO.guideId()))) {
+            throw new IllegalArgumentException(
+                    "Trip dates and assigned guide cannot be changed while active bookings exist."
             );
         }
 
@@ -215,9 +282,43 @@ public class AdminServiceImpl implements AdminService {
     @Transactional
     public void deleteTrip(Long tripId) {
 
-        if (!tripRepository.existsById(tripId)) {
-            throw new ResourceNotFoundException(
-                    "Trip not found with ID: " + tripId
+        Trip trip = tripRepository.findById(tripId)
+                .orElseThrow(() ->
+                        new ResourceNotFoundException(
+                                "Trip not found with ID: " + tripId
+                        )
+                );
+
+        entityManager.refresh(trip, LockModeType.PESSIMISTIC_WRITE);
+
+        if (bookingRepository.existsByTripTripId(trip.getTripId())) {
+            throw new IllegalArgumentException(
+                    "This trip cannot be deleted because it has bookings."
+            );
+        }
+
+        String imagePublicId = trip.getTripImagePublicId();
+
+        if (imagePublicId != null && !imagePublicId.isBlank()) {
+            TransactionSynchronizationManager.registerSynchronization(
+                    new TransactionSynchronization() {
+
+                        @Override
+                        public void afterCommit() {
+
+                            try {
+                                imageUploadService.deleteImage(imagePublicId);
+
+                            } catch (Exception exception) {
+
+                                log.error(
+                                        "Failed to delete old Cloudinary image: {}",
+                                        imagePublicId,
+                                        exception
+                                );
+                            }
+                        }
+                    }
             );
         }
 
@@ -261,6 +362,10 @@ public class AdminServiceImpl implements AdminService {
         }
 
         String oldPublicId = trip.getTripImagePublicId();
+        boolean rollbackCleanupRegistered = registerTripImageSynchronization(
+                uploaded.publicId(),
+                oldPublicId
+        );
 
         try {
 
@@ -271,53 +376,71 @@ public class AdminServiceImpl implements AdminService {
             // 4. Save and flush database changes
             Trip savedTrip = tripRepository.saveAndFlush(trip);
 
-            TripResponseDTO response = tripMapper.toDto(savedTrip);
-
-            // 5. Delete old image only after successful commit
-            if (oldPublicId != null
-                    && !oldPublicId.isBlank()
-                    && !oldPublicId.equals(uploaded.publicId())) {
-
-                TransactionSynchronizationManager.registerSynchronization(
-                        new TransactionSynchronization() {
-
-                            @Override
-                            public void afterCommit() {
-
-                                try {
-                                    imageUploadService.deleteImage(oldPublicId);
-
-                                } catch (Exception exception) {
-
-                                    log.error(
-                                            "Failed to delete old Cloudinary image: {}",
-                                            oldPublicId,
-                                            exception
-                                    );
-                                }
-                            }
-                        }
-                );
-            }
-
-            return response;
+            return tripMapper.toDto(savedTrip);
 
         } catch (RuntimeException exception) {
 
-            // 6. Clean up the new image if database update fails
-            try {
-                imageUploadService.deleteImage(uploaded.publicId());
-
-            } catch (Exception cleanupException) {
-
-                log.error(
-                        "Failed to clean up new Cloudinary image: {}",
-                        uploaded.publicId(),
-                        cleanupException
-                );
+            // The rollback callback owns cleanup when it was registered.
+            if (!rollbackCleanupRegistered) {
+                deleteNewCloudinaryImage(uploaded.publicId());
             }
 
             throw exception;
+        }
+    }
+
+    private boolean registerTripImageSynchronization(
+            String newPublicId,
+            String oldPublicId) {
+
+        if (!TransactionSynchronizationManager.isSynchronizationActive()) {
+            return false;
+        }
+
+        TransactionSynchronizationManager.registerSynchronization(
+                new TransactionSynchronization() {
+
+                    @Override
+                    public void afterCommit() {
+                        if (oldPublicId != null
+                                && !oldPublicId.isBlank()
+                                && !oldPublicId.equals(newPublicId)) {
+
+                            try {
+                                imageUploadService.deleteImage(oldPublicId);
+
+                            } catch (Exception exception) {
+                                log.error(
+                                        "Failed to delete old Cloudinary image: {}",
+                                        oldPublicId,
+                                        exception
+                                );
+                            }
+                        }
+                    }
+
+                    @Override
+                    public void afterCompletion(int status) {
+                        if (status != STATUS_COMMITTED) {
+                            deleteNewCloudinaryImage(newPublicId);
+                        }
+                    }
+                }
+        );
+
+        return true;
+    }
+
+    private void deleteNewCloudinaryImage(String publicId) {
+        try {
+            imageUploadService.deleteImage(publicId);
+
+        } catch (Exception exception) {
+            log.error(
+                    "Failed to clean up new Cloudinary image: {}",
+                    publicId,
+                    exception
+            );
         }
     }
 

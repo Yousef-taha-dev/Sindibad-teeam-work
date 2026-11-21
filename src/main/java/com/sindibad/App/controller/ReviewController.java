@@ -9,7 +9,10 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.GrantedAuthority;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -39,12 +42,22 @@ public class ReviewController {
     @PreAuthorize("hasRole('TOURIST')")
     public ResponseEntity<ReviewResponseDTO> createReview(
             @PathVariable Long touristId,
-            @Valid @RequestBody ReviewRequestDTO reviewDTO) {
+            @Valid @RequestBody ReviewRequestDTO reviewDTO,
+            Authentication authentication) {
+
+        if (authentication == null
+                || authentication.getName() == null
+                || authentication.getName().isBlank()) {
+            throw new AccessDeniedException(
+                    "You can only create your own review."
+            );
+        }
 
         ReviewResponseDTO response =
                 reviewService.createReview(
                         touristId,
-                        reviewDTO
+                        reviewDTO,
+                        authentication.getName()
                 );
 
         return ResponseEntity
@@ -76,10 +89,37 @@ public class ReviewController {
     @DeleteMapping("/{reviewId}")
     @PreAuthorize("hasAnyRole('TOURIST', 'ADMIN')")
     public ResponseEntity<Void> deleteReview(
-            @PathVariable Long reviewId) {
+            @PathVariable Long reviewId,
+            Authentication authentication) {
 
-        reviewService.deleteReview(reviewId);
+        if (authentication == null
+                || authentication.getName() == null
+                || authentication.getName().isBlank()) {
+            throw new AccessDeniedException(
+                    "You can only delete your own review."
+            );
+        }
+
+        reviewService.deleteReview(
+                reviewId,
+                authentication.getName(),
+                isAdmin(authentication)
+        );
 
         return ResponseEntity.noContent().build();
+    }
+
+    private boolean isAdmin(Authentication authentication) {
+        if (authentication.getAuthorities() == null) {
+            return false;
+        }
+
+        for (GrantedAuthority authority : authentication.getAuthorities()) {
+            if ("ROLE_ADMIN".equals(authority.getAuthority())) {
+                return true;
+            }
+        }
+
+        return false;
     }
 }
